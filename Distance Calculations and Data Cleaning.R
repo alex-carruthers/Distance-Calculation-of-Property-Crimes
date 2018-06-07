@@ -1,0 +1,46 @@
+#Developer Notes: To run distHaversine to calculate the distance between two coordinate points, the coordinates must be entered 
+#in FIRST longitude and THEN latitude (and in that order!).
+#distHaversine provides the distance between two points is in meters
+
+install.packages("geosphere")    #installs package for calculating distance between two points
+library(geosphere)              #loads geosphere package into R environment
+
+crime_2001 <- read.csv(file.choose("Chicago_Crimes_2001"), head=TRUE)   #imports crimes file
+PD2001 <- read.csv(file.choose("PD_Coordinates_2001"), head=TRUE)   #imports police coordinates file; in future versions, other Points Of Interest (POI) will be imported
+
+scratch <- c() #creates blank vector where some "scratch work" can be done for the below loop
+
+distances <- data.frame()    #creates blank dataframe that will be used for storing the outputs and later run for statistical analysis in programs such as Gretl or SAS
+
+sub1_2001 <- subset(crime_2001, Latitude != "NA")
+sub2_2001 <- subset(sub1_2001, Primary.Type != "ASSAULT")
+sub3_2001 <- subset(sub2_2001, Primary.Type != "BATTERY")
+sub4_2001 <- subset(sub3_2001, Primary.Type != "OFFENSE INVOLVING CHILDREN")
+sub5_2001 <- subset(sub4_2001, Primary.Type != "SEX OFFENSE")
+sub6_2001 <- subset(sub5_2001, Primary.Type != "HOMICIDE")
+sub7_2001 <- subset(sub6_2001, Primary.Type != "CRIM SEXUAL ASSAULT")
+sub8_2001 <- subset(sub7_2001, Primary.Type != "WEAPONS VIOLATION")
+
+sample_2001 <- data.frame() #Creates new data frame for a random sample
+sample_2001 <- sub8_2001[sample(nrow(sub8_2001), size = 100000, replace = TRUE), ] #Insert the command for a random sample on this line
+
+
+TF_2001 <- data.frame()
+pb <- txtProgressBar(min = 0, max = nrow(sample_2001), style = 3)
+for (i in 1:nrow(sample_2001)) {
+  TF_2001 <- cbind(sample_2001$IUCR %in% c("041A","051A","051B","141A","141B","141C","142A","142B","1435","143A","143B","143C","1440","1450","1460","1475","1476","1477","1478","1479","1480","1481","1535","1536","1537","1540","1541","1542","1544","1562","1563","1564","1565","1566","1570","1572","1574","1576","1578","1580","1582","1585","1710","1715","1720","1725","1750","1751","1752","1753","1754","1755","1775","1780","1790","1791","1792","1811","1812","1850","1860","1900","2020","2021","2022","2023","2024","2025","2026","2027","2028","2029","2031","2034","2040","2060","2070","2080","2090","2091","2093","2094","2095","2110","2120","2170","2220","2230","2240","2250","2251","2500","2820","2825","2826","2830","2840","2850","2851","2860","2870","2890","2895","2900","3000","3100","3200","3300","3610","3710","3720","3730","3731","3740","3750","3751","3760","3770","3800","3910","3920","3960","3966","3970","3975","3980","4210","4220","4230","4240","4255","4310","4386","4387","4388","4389","4410","4420","4510","4625","4650","4651","4652","4740","4750","4800","4810","4860","5000","5001","5002","5003","5004","5007","5009","500E","500N","5011","501A","501H","502P","502R","502T","5110","5111","5112","5120","5121","5122","5130","5131","5132","0110","0130","0141","0142","0261","0262","0263","0264","0265","0266","0271","0272","0273","0274","0275","0281","0291","041A","0420","0430","0440","0450","0451","0452","0453","0454","0460","0461","0462","0470","0475","0479","0480","0481","0482","0483","0484","0485","0486","0487","0488","0489","0490","0491","0492","0493","0494","0495","0496","0497","0498","0510","051A","051B","0520","0530","0545","0550","0551","0552","0553","0554","0555","0556","0557","0558","0560","0580","0581","0583","0584"))
+  setTxtProgressBar(pb, i)}
+
+sample_2001$Eco_Crime <- TF_2001
+
+sub9_2001 <- subset(sample_2001, Eco_Crime == FALSE)
+
+#Note: the command: "nrow(crime)" when used for the number of times arguement in the below loop can make the loop run until it has run through every line and stop after finishing the last one
+pb <- txtProgressBar(min = 0, max = nrow(sub9_2001), style = 3)
+for (i in 1:nrow(sub9_2001)) {     #Begins for loop in R, will loop the total amount of rows/columns until it reaches the last line in the crime dataframe
+  for (j in 1:nrow(PD2001)) {
+    scratch <- rbind(distHaversine(c(sub9_2001[i,17], sub9_2001[i,16]), c(PD2001[j,4], PD2001[j,3])))
+  }
+  distances[i,1] <- min(scratch)
+  setTxtProgressBar(pb, i)}  #R searches for the lowest value distance and writes the value and name to the dataframe
+close(pb)
